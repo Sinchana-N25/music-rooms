@@ -1,4 +1,6 @@
-﻿# Python
+﻿# =========================
+# Python / Django
+# =========================
 *.pyc
 *.pyo
 *.pyd
@@ -20,16 +22,6 @@ media/
 staticfiles/
 local_settings.py
 
-# IDEs and editors
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# OS-specific files
-.DS_Store
-Thumbs.db
-
 # Coverage and testing
 .coverage
 *.cover
@@ -39,3 +31,43 @@ htmlcov/
 # Migrations (optional – if you want to ignore them in dev)
 # **/migrations/
 # !**/migrations/__init__.py
+
+
+# =========================
+# Node / React
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log
+
+# Build outputs
+dist/
+build/
+.cache/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Local environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =========================
+# IDEs / Editors
+# =========================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# OS-specific files
+# =========================
+.DS_Store
+Thumbs.db
