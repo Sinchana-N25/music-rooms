@@ -1,0 +1,41 @@
+﻿# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+*.env
+
+# Django stuff
+*.log
+*.pot
+*.py[cod]
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Coverage and testing
+.coverage
+*.cover
+htmlcov/
+.pytest_cache/
+
+# Migrations (optional – if you want to ignore them in dev)
+# **/migrations/
+# !**/migrations/__init__.py
