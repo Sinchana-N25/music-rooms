@@ -363,37 +363,4 @@ router.post("/skip", async (req, res) => {
   }
 });
 
-// Provides the host's raw access token to the frontend
-router.get("/get-host-token", async (req, res) => {
-  try {
-    const room = await Room.findOne({ host: req.session.id });
-    if (room) {
-      const token = await SpotifyToken.findOne({ user: room.host });
-      if (token) {
-        return res.status(200).json({ access_token: token.access_token });
-      }
-    }
-    return res.status(404).json({ error: "Token not found for host." });
-  } catch (error) {
-    return res.status(500).json({ error: "An error occurred" });
-  }
-});
-
-// Tells Spotify to start playing on a new device (our browser)
-router.put("/transfer-playback", async (req, res) => {
-  try {
-    const { device_id } = req.body;
-    const host = req.session.id;
-
-    const data = {
-      device_ids: [device_id],
-      play: true,
-    };
-    await executeSpotifyApiRequest(host, "/me/player", "put", data);
-    return res.status(204).send();
-  } catch (error) {
-    return res.status(500).json({ error: "An error occurred" });
-  }
-});
-
 module.exports = router;

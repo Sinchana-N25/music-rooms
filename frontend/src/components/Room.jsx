@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Grid, Typography, Button } from "@mui/material";
 import CreateRoomPage from "./CreateRoomPage";
 import MusicPlayer from "./MusicPlayer";
-import SpotifyWebPlayer from "./SpotifyWebPlayer";
-
 export default function Room() {
   const [roomDetails, setRoomDetails] = useState({
     votesToSkip: 2,
@@ -12,7 +10,6 @@ export default function Room() {
     isHost: false,
   });
   const [showSettings, setShowSettings] = useState(false);
-  const [hostToken, setHostToken] = useState(null);
   const [spotifyAuthenticated, setSpotifyAuthenticated] = useState(false);
   const [song, setSong] = useState(null);
   const { roomCode } = useParams();
@@ -71,26 +68,6 @@ export default function Room() {
     // This is a cleanup function that React runs when the component unmounts
     return () => clearInterval(interval);
   }, []); // The empty array means this effect runs only once on mount
-
-  // This effect runs after we know the user is the host and is authenticated
-  useEffect(() => {
-    const getHostToken = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/get-host-token`,
-          { credentials: "include" }
-        );
-        const data = await response.json();
-        setHostToken(data.access_token);
-      } catch (error) {
-        console.error("Error fetching host token:", error);
-      }
-    };
-
-    if (roomDetails.isHost && spotifyAuthenticated) {
-      getHostToken();
-    }
-  }, [roomDetails.isHost, spotifyAuthenticated]);
 
   const authenticateSpotify = async () => {
     try {
@@ -251,12 +228,5 @@ export default function Room() {
     </Grid>
   );
 
-  return (
-    <>
-      {/* The SpotifyWebPlayer component is rendered here, but has no UI */}
-      {hostToken && <SpotifyWebPlayer accessToken={hostToken} />}
-
-      {showSettings ? renderSettings() : renderRoomDetails()}
-    </>
-  );
+  return showSettings ? renderSettings() : renderRoomDetails();
 }
