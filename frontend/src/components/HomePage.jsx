@@ -39,7 +39,7 @@ function HomePageContent() {
     <Grid container spacing={3} direction="column" alignItems="center">
       <Grid item>
         <Typography variant="h3" component="h3">
-          House Party
+          Jam Circle
         </Typography>
       </Grid>
       <Grid item>
