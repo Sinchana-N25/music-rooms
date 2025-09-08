@@ -14,12 +14,39 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 
-export default function MusicPlayer({ song }) {
+export default function MusicPlayer({ song, isHost, guestCanPause }) {
   if (!song || !song.id) {
     return null; // Don't render anything if there's no song
   }
 
   const songProgress = (song.time / song.duration) * 100;
+
+  const playSong = () => {
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    };
+    fetch(`${import.meta.env.VITE_API_URL}/api/play`, requestOptions);
+  };
+
+  const pauseSong = () => {
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    };
+    fetch(`${import.meta.env.VITE_API_URL}/api/pause`, requestOptions);
+  };
+
+  const skipSong = () => {
+    const requestOptions = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    };
+    fetch(`${import.meta.env.VITE_API_URL}/api/skip`, requestOptions);
+  };
 
   return (
     <Card
@@ -57,16 +84,22 @@ export default function MusicPlayer({ song }) {
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-          <IconButton size="small" color="primary">
-            {song.is_playing ? (
-              <PauseIcon fontSize="small" />
-            ) : (
-              <PlayArrowIcon fontSize="small" />
-            )}
+          <IconButton
+            size="small"
+            color="primary"
+            // The button is disabled if the user doesn't have permission
+            disabled={!isHost && !guestCanPause}
+            onClick={() => (song.is_playing ? pauseSong() : playSong())}
+          >
+            {song.is_playing ? <PauseIcon /> : <PlayArrowIcon />}
           </IconButton>
-          <IconButton size="small" color="primary">
-            <SkipNextIcon fontSize="small" />
+          <IconButton size="small" color="primary" onClick={skipSong}>
+            <SkipNextIcon />
           </IconButton>
+          {/* --- ADD VOTE COUNTER --- */}
+          <Typography color="text.secondary" variant="body2" sx={{ ml: 1 }}>
+            {song.votes} / {song.votes_required}
+          </Typography>
         </Box>
 
         <LinearProgress

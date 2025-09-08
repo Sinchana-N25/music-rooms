@@ -5,6 +5,8 @@ const axios = require("axios");
 const { executeSpotifyApiRequest } = require("../spotify");
 const SpotifyToken = require("../models/SpotifyToken");
 
+const songVotes = {};
+
 // Helper function to generate a unique room code
 const generateUniqueCode = async () => {
   while (true) {
@@ -230,6 +232,21 @@ router.get("/current-song", async (req, res) => {
     }
 
     const item = data.item;
+
+    const songId = item.id;
+    const roomCode = req.session.room_code;
+
+    // Check if the current song is different from the one we have votes for
+    if (songVotes[roomCode] && !songVotes[roomCode][songId]) {
+      // Song has changed, reset votes for this room
+      delete songVotes[roomCode];
+    }
+
+    const votes =
+      songVotes[roomCode] && songVotes[roomCode][songId]
+        ? songVotes[roomCode][songId].length
+        : 0;
+
     const song = {
       title: item.name,
       artist: item.artists.map((artist) => artist.name).join(", "),
@@ -237,13 +254,111 @@ router.get("/current-song", async (req, res) => {
       time: data.progress_ms,
       image_url: item.album.images[0]?.url,
       is_playing: data.is_playing,
-      votes: 0, // We'll add vote logic later
+      votes: votes,
+      votes_required: room.votes_to_skip, // Also send how many are needed
       id: item.id,
     };
 
     return res.status(200).json(song);
   } catch (error) {
     console.error("❌ Error in /current-song route:", error.message);
+    return res.status(500).json({ error: "An error occurred" });
+  }
+});
+
+// --- Playing the song route ---
+router.put("/play", async (req, res) => {
+  try {
+    const room = await Room.findOne({ code: req.session.room_code });
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+    // Check if the user has permission
+    if (req.session.id === room.host || room.guest_can_pause) {
+      await executeSpotifyApiRequest(room.host, "/me/player/play", "put");
+      return res.status(204).send(); // 204 No Content is appropriate here
+    }
+    return res
+      .status(403)
+      .json({ error: "You do not have permission to do that." });
+  } catch (error) {
+    return res.status(500).json({ error: "An error occurred" });
+  }
+});
+
+// --- Pausing the song route ---
+router.put("/pause", async (req, res) => {
+  try {
+    const room = await Room.findOne({ code: req.session.room_code });
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+    // Check if the user has permission
+    if (req.session.id === room.host || room.guest_can_pause) {
+      await executeSpotifyApiRequest(room.host, "/me/player/pause", "put");
+      return res.status(204).send();
+    }
+    return res
+      .status(403)
+      .json({ error: "You do not have permission to do that." });
+  } catch (error) {
+    return res.status(500).json({ error: "An error occurred" });
+  }
+});
+
+// --- skipping the song ROUTE ---
+router.post("/skip", async (req, res) => {
+  try {
+    const roomCode = req.session.room_code;
+    const room = await Room.findOne({ code: roomCode });
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+
+    const hostSessionId = room.host;
+    const currentUserSessionId = req.session.id;
+
+    // Immediately skip if the host clicks the button
+    if (currentUserSessionId === hostSessionId) {
+      await executeSpotifyApiRequest(hostSessionId, "/me/player/next", "post");
+      // Reset votes for this room after skipping
+      if (songVotes[roomCode]) {
+        delete songVotes[roomCode];
+      }
+      return res.status(204).send();
+    }
+
+    // --- Handle Guest Voting ---
+    const songData = await executeSpotifyApiRequest(
+      hostSessionId,
+      "/me/player/currently-playing"
+    );
+    if (!songData || !songData.item) {
+      return res.status(400).json({ error: "No song is currently playing." });
+    }
+    const songId = songData.item.id;
+
+    // Initialize vote tracking for this room/song if it doesn't exist
+    if (!songVotes[roomCode]) songVotes[roomCode] = {};
+    if (!songVotes[roomCode][songId]) songVotes[roomCode][songId] = [];
+
+    // Add user's vote if they haven't voted yet
+    if (!songVotes[roomCode][songId].includes(currentUserSessionId)) {
+      songVotes[roomCode][songId].push(currentUserSessionId);
+    }
+
+    const currentVotes = songVotes[roomCode][songId].length;
+
+    // Check if votes have reached the threshold
+    if (currentVotes >= room.votes_to_skip) {
+      await executeSpotifyApiRequest(hostSessionId, "/me/player/next", "post");
+      // Reset votes for this room after skipping
+      delete songVotes[roomCode];
+      return res.status(204).send();
+    }
+
+    return res.status(200).json({ message: "Vote counted." });
+  } catch (error) {
     return res.status(500).json({ error: "An error occurred" });
   }
 });

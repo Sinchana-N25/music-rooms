@@ -200,7 +200,11 @@ export default function Room() {
       )}
       {/* --- RENDER THE MUSIC PLAYER --- */}
       <Grid item xs={12}>
-        <MusicPlayer song={song} />
+        <MusicPlayer
+          song={song}
+          isHost={roomDetails.isHost}
+          guestCanPause={roomDetails.guestCanPause}
+        />
       </Grid>
       {roomDetails.isHost && (
         <Grid item xs={12}>
