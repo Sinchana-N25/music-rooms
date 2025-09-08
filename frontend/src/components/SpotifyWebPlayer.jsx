@@ -55,7 +55,7 @@ export default function SpotifyWebPlayer({ accessToken }) {
         player.disconnect();
       }
     };
-  }, [accessToken]); // Rerun effect if accessToken changes
+  }, [accessToken, player]); // Rerun effect if accessToken changes
 
   return null; // This component doesn't render any visible UI
 }
