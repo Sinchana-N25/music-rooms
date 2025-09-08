@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
+const axios = require("axios");
 const SpotifyToken = require("../models/SpotifyToken");
 
 // Helper function to generate a unique room code
@@ -27,6 +28,8 @@ router.post("/create-room", async (req, res) => {
       room.guest_can_pause = guest_can_pause;
       room.votes_to_skip = votes_to_skip;
       await room.save();
+      //  Make sure host also has room_code in session
+      req.session.room_code = room.code;
       return res.status(200).json(room);
     } else {
       // If it doesn't exist, create a new one
@@ -38,6 +41,8 @@ router.post("/create-room", async (req, res) => {
         code,
       });
       await room.save();
+      // Store the new room_code in session for the host
+      req.session.room_code = code;
       return res.status(201).json(room);
     }
   } catch (error) {
@@ -121,13 +126,21 @@ router.patch("/update-room", async (req, res) => {
 
 // This is the endpoint that Spotify redirects to after the user logs in
 router.get("/spotify-callback", async (req, res) => {
-  const { code, error } = req.query;
+  const code = req.query.code;
+  const error = req.query.error;
+  const state = req.query.state; // ✅ explicitly declare it
+
+  console.log("⚡️ Spotify Callback Hit");
+  console.log("Query params received:", { code, error, state });
+  console.log("Session at callback:", req.session);
 
   if (error) {
+    console.error("❌ Spotify callback error param:", error);
     return res.status(400).send(`Callback Error: ${error}`);
   }
 
   try {
+    console.log("🔑 Exchanging code for token...");
     const response = await axios({
       method: "post",
       url: "https://accounts.spotify.com/api/token",
@@ -147,10 +160,12 @@ router.get("/spotify-callback", async (req, res) => {
           ).toString("base64"),
       },
     });
+    console.log("Spotify token response:", response.data);
 
     const { access_token, refresh_token, expires_in, token_type } =
       response.data;
     const user = req.session.id;
+    console.log("Saving token for user:", user);
 
     // Use findOneAndUpdate with upsert to create or update the token
     await SpotifyToken.findOneAndUpdate(
@@ -159,9 +174,25 @@ router.get("/spotify-callback", async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Redirect the user back to the room they were in
-    res.redirect(`http://localhost:5173/room/${req.session.room_code}`);
+    // Prefer session room_code, fallback to state param
+    // Resolve room code
+    const roomCode = req.session.room_code || state; // ✅ now 'state' is defined
+    console.log("🎯 Redirecting back to room:", roomCode);
+
+    if (!roomCode) {
+      console.warn("⚠️ No room code found, sending back to home");
+      return res.redirect("http://localhost:5173");
+    }
+
+    res.redirect(`http://localhost:5173/room/${roomCode}`);
   } catch (err) {
+    console.error("Spotify token exchange error:");
+    if (err.response) {
+      console.error("Status:", err.response.status);
+      console.error("Data:", err.response.data);
+    } else {
+      console.error("Message:", err.message);
+    }
     res.status(500).send("Error retrieving access token");
   }
 });
@@ -185,6 +216,7 @@ router.get("/get-auth-url", (req, res) => {
       client_id: process.env.SPOTIFY_CLIENT_ID,
       scope: scopes,
       redirect_uri: process.env.REDIRECT_URI,
+      state: req.session.room_code,
     }).toString();
 
   res.status(200).json({ url });
