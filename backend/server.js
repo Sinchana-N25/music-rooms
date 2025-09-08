@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const session = require("express-session");
 require("dotenv").config(); // Load environment variables
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +37,15 @@ app.use("/api", apiRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from the Express Server!");
+});
+
+// This serves the static files from the React app's build folder
+app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+// This is the catch-all route that sends back index.html for any other request.
+// It allows React Router to handle the client-side routing.
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
 });
 
 app.listen(PORT, () => {

@@ -1,3 +1,5 @@
+// frontend/src/components/HomePage.jsx
+
 import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
@@ -12,29 +14,8 @@ import RoomJoinPage from "./RoomJoinPage";
 import CreateRoomPage from "./CreateRoomPage";
 import Room from "./Room";
 
-function HomePageContent() {
-  const [roomCode, setRoomCode] = useState(null);
-
-  useEffect(() => {
-    const checkUserInRoom = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/user-in-room`,
-          { credentials: "include" }
-        );
-        const data = await response.json();
-        setRoomCode(data.code);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    checkUserInRoom();
-  }, []);
-
-  if (roomCode) {
-    return <Navigate to={`/room/${roomCode}`} replace />;
-  }
-
+// This is the new component that will render the main page content
+function RenderHomePage() {
   return (
     <Grid container spacing={3} direction="column" alignItems="center">
       <Grid item>
@@ -57,10 +38,48 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
+  const [roomCode, setRoomCode] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUserInRoom = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/user-in-room`,
+          { credentials: "include" }
+        );
+        const data = await response.json();
+        setRoomCode(data.code);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        // Set loading to false after the fetch is complete
+        setLoading(false);
+      }
+    };
+    checkUserInRoom();
+  }, []);
+
+  // While loading, we render nothing to prevent the flash
+  if (loading) {
+    return null;
+  }
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePageContent />} />
+        <Route
+          path="/"
+          element={
+            // If we have a room code, redirect immediately.
+            // Otherwise, render the main page content.
+            roomCode ? (
+              <Navigate to={`/room/${roomCode}`} replace />
+            ) : (
+              <RenderHomePage />
+            )
+          }
+        />
         <Route path="/join" element={<RoomJoinPage />} />
         <Route path="/create" element={<CreateRoomPage />} />
         <Route path="/room/:roomCode" element={<Room />} />
