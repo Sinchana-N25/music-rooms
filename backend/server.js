@@ -3,14 +3,13 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const session = require("express-session");
 require("dotenv").config(); // Load environment variables
-const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your frontend's URL
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
   })
 );
@@ -39,15 +38,12 @@ app.get("/", (req, res) => {
   res.send("Hello from the Express Server!");
 });
 
-// This serves the static files from the React app's build folder
-app.use(express.static(path.join(__dirname, "../frontend/dist")));
+// Export the app for Vercel/Render, and also listen for local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
 
-// This is the catch-all route that sends back index.html for any other request.
-// It allows React Router to handle the client-side routing.
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
-});
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+module.exports = app;
