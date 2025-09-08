@@ -28,13 +28,14 @@ export default function CreateRoomPage() {
   const handleRoomButtonPressed = () => {
     const requestOptions = {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         votes_to_skip: votesToSkip,
         guest_can_pause: guestCanPause,
       }),
     };
-    fetch("http://localhost:5000/api/create-room", requestOptions)
+    fetch(`${import.meta.env.VITE_API_URL}/api/create-room`, requestOptions)
       .then((response) => response.json())
       .then((data) => navigate("/room/" + data.code));
   };

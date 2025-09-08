@@ -44,4 +44,42 @@ router.post("/create-room", async (req, res) => {
   }
 });
 
+router.get("/get-room", async (req, res) => {
+  const { code } = req.query;
+  try {
+    const room = await Room.findOne({ code });
+    if (room) {
+      // Add a field to check if the current user is the host
+      const isHost = req.session.id === room.host;
+      return res.status(200).json({ ...room.toObject(), is_host: isHost });
+    }
+    return res.status(404).json({ error: "Room not found" });
+  } catch (error) {
+    return res.status(500).json({ error: "An error occurred" });
+  }
+});
+
+// Checks if the user's session is already in a room
+router.get("/user-in-room", (req, res) => {
+  if (req.session.room_code) {
+    return res.status(200).json({ code: req.session.room_code });
+  }
+  return res.status(200).json({ code: null });
+});
+
+// Handles joining a room
+router.post("/join-room", async (req, res) => {
+  const { code } = req.body;
+  try {
+    const room = await Room.findOne({ code });
+    if (room) {
+      req.session.room_code = code; // Store room code in session
+      return res.status(200).json({ message: "Room Joined!" });
+    }
+    return res.status(404).json({ error: "Room not found" });
+  } catch (error) {
+    return res.status(500).json({ error: "An error occurred" });
+  }
+});
+
 module.exports = router;
