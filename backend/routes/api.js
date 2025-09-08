@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
 const axios = require("axios");
+const { executeSpotifyApiRequest } = require("../spotify");
 const SpotifyToken = require("../models/SpotifyToken");
 
 // Helper function to generate a unique room code
@@ -125,75 +126,64 @@ router.patch("/update-room", async (req, res) => {
 });
 
 // This is the endpoint that Spotify redirects to after the user logs in
+// --- Spotify Callback ROUTE ---
 router.get("/spotify-callback", async (req, res) => {
-  const code = req.query.code;
-  const error = req.query.error;
-  const state = req.query.state; // ✅ explicitly declare it
-
-  console.log("⚡️ Spotify Callback Hit");
-  console.log("Query params received:", { code, error, state });
-  console.log("Session at callback:", req.session);
-
-  if (error) {
-    console.error("❌ Spotify callback error param:", error);
-    return res.status(400).send(`Callback Error: ${error}`);
-  }
+  const code = req.query.code || null;
+  const state = req.query.state || null;
 
   try {
-    console.log("🔑 Exchanging code for token...");
-    const response = await axios({
-      method: "post",
-      url: "https://accounts.spotify.com/api/token",
-      data: new URLSearchParams({
+    // Exchange code for access + refresh tokens
+    const response = await axios.post(
+      "https://accounts.spotify.com/api/token",
+      new URLSearchParams({
         grant_type: "authorization_code",
         code: code,
         redirect_uri: process.env.REDIRECT_URI,
-      }),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization:
-          "Basic " +
-          Buffer.from(
-            process.env.SPOTIFY_CLIENT_ID +
-              ":" +
-              process.env.SPOTIFY_CLIENT_SECRET
-          ).toString("base64"),
-      },
-    });
-    console.log("Spotify token response:", response.data);
+        client_id: process.env.SPOTIFY_CLIENT_ID,
+        client_secret: process.env.SPOTIFY_CLIENT_SECRET,
+      }).toString(),
+      {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      }
+    );
 
     const { access_token, refresh_token, expires_in, token_type } =
       response.data;
-    const user = req.session.id;
-    console.log("Saving token for user:", user);
 
-    // Use findOneAndUpdate with upsert to create or update the token
+    // Find the room where this session belongs
+    const roomCode = req.session.room_code || state; // fallback if you’re passing room code in `state`
+    const room = await Room.findOne({ code: roomCode });
+
+    if (!room) {
+      console.error("⚠️ No room found for code:", roomCode);
+      return res.redirect("http://localhost:5173"); // fallback redirect
+    }
+
+    // Always tie token to the HOST of the room
+    const user = room.host;
+
     await SpotifyToken.findOneAndUpdate(
       { user },
-      { access_token, refresh_token, expires_in, token_type },
+      {
+        access_token,
+        refresh_token,
+        expires_in,
+        token_type,
+        created_at: Date.now(),
+      },
       { upsert: true, new: true }
     );
 
-    // Prefer session room_code, fallback to state param
-    // Resolve room code
-    const roomCode = req.session.room_code || state; // ✅ now 'state' is defined
-    console.log("🎯 Redirecting back to room:", roomCode);
+    console.log("✅ Spotify tokens saved for host:", user);
 
-    if (!roomCode) {
-      console.warn("⚠️ No room code found, sending back to home");
-      return res.redirect("http://localhost:5173");
-    }
-
-    res.redirect(`http://localhost:5173/room/${roomCode}`);
-  } catch (err) {
-    console.error("Spotify token exchange error:");
-    if (err.response) {
-      console.error("Status:", err.response.status);
-      console.error("Data:", err.response.data);
-    } else {
-      console.error("Message:", err.message);
-    }
-    res.status(500).send("Error retrieving access token");
+    // Redirect back to frontend room page
+    return res.redirect(`http://localhost:5173/room/${roomCode}`);
+  } catch (error) {
+    console.error(
+      "❌ Error in /spotify-callback:",
+      error.response?.data || error.message
+    );
+    return res.redirect("http://localhost:5173");
   }
 });
 
@@ -220,6 +210,42 @@ router.get("/get-auth-url", (req, res) => {
     }).toString();
 
   res.status(200).json({ url });
+});
+
+// --- Current song ROUTE ---
+router.get("/current-song", async (req, res) => {
+  try {
+    const room = await Room.findOne({ code: req.session.room_code });
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+    const host = room.host;
+    const data = await executeSpotifyApiRequest(
+      host,
+      "/me/player/currently-playing"
+    );
+
+    if (data.error || !data || !data.item) {
+      return res.status(204).json({ message: "No song currently playing." });
+    }
+
+    const item = data.item;
+    const song = {
+      title: item.name,
+      artist: item.artists.map((artist) => artist.name).join(", "),
+      duration: item.duration_ms,
+      time: data.progress_ms,
+      image_url: item.album.images[0]?.url,
+      is_playing: data.is_playing,
+      votes: 0, // We'll add vote logic later
+      id: item.id,
+    };
+
+    return res.status(200).json(song);
+  } catch (error) {
+    console.error("❌ Error in /current-song route:", error.message);
+    return res.status(500).json({ error: "An error occurred" });
+  }
 });
 
 module.exports = router;

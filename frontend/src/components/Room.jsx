@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Grid, Typography, Button } from "@mui/material";
 import CreateRoomPage from "./CreateRoomPage";
+import MusicPlayer from "./MusicPlayer";
 
 export default function Room() {
   const [roomDetails, setRoomDetails] = useState({
@@ -11,6 +12,7 @@ export default function Room() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [spotifyAuthenticated, setSpotifyAuthenticated] = useState(false);
+  const [song, setSong] = useState(null);
   const { roomCode } = useParams();
   const navigate = useNavigate();
 
@@ -57,6 +59,16 @@ export default function Room() {
       checkAuthStatus();
     }
   }, [roomDetails.isHost]); // Re-run when isHost changes
+
+  useEffect(() => {
+    // This interval will poll for the current song every second
+    const interval = setInterval(() => {
+      getCurrentSong();
+    }, 1000);
+
+    // This is a cleanup function that React runs when the component unmounts
+    return () => clearInterval(interval);
+  }, []); // The empty array means this effect runs only once on mount
 
   const authenticateSpotify = async () => {
     try {
@@ -127,6 +139,32 @@ export default function Room() {
     </Grid>
   );
 
+  const getCurrentSong = () => {
+    fetch(`${import.meta.env.VITE_API_URL}/api/current-song`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (response.status === 204) {
+          // No song is playing
+          setSong(null);
+          return null;
+        }
+        if (!response.ok) {
+          console.error("Error fetching current song:", response.status);
+          return null;
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data) {
+          setSong(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error in getCurrentSong:", err);
+      });
+  };
+
   const renderRoomDetails = () => (
     <Grid container spacing={1} direction="column" alignItems="center">
       <Grid item>
@@ -160,6 +198,10 @@ export default function Room() {
           </Button>
         </Grid>
       )}
+      {/* --- RENDER THE MUSIC PLAYER --- */}
+      <Grid item xs={12}>
+        <MusicPlayer song={song} />
+      </Grid>
       {roomDetails.isHost && (
         <Grid item xs={12}>
           <Button
