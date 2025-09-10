@@ -44,3 +44,8 @@ body {
 .Mui-focused .MuiOutlinedInput-notchedOutline {
   border-color: #4dabf7 !important; /* light blue */
 }
+
+/* Error message text below input */
+.MuiFormHelperText-root.Mui-error {
+  color: #d32f2f !important; /* red error text */
+}
