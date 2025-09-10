@@ -18,3 +18,29 @@ body {
   align-items: center;
   text-align: center;
 }
+
+/* Force white text across all form controls */
+.MuiFormHelperText-root,
+.MuiInputBase-input,
+.MuiTypography-root,
+.MuiButton-root {
+  color: white !important;
+}
+
+.MuiFormLabel-root {
+  color: #969696 !important;
+}
+
+.MuiFormLabel-root.Mui-focused {
+  color: #4dabf7 !important; /* light blue */
+}
+
+/* Make input borders lighter */
+.MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Optional: when focused, highlight inputs in your accent */
+.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #4dabf7 !important; /* light blue */
+}
