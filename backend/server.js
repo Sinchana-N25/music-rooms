@@ -18,10 +18,13 @@ app.use(express.json());
 // --- Add Session Middleware ---
 app.use(
   session({
-    secret: "supersecretkey", // In production, use an environment variable
+    secret: process.env.SESSION_SECRET || "supersecretkey", // In production, use an environment variable
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false }, // In production, set to true for HTTPS
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+    },
   })
 );
 

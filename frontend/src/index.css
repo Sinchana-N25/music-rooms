@@ -49,3 +49,26 @@ body {
 .MuiFormHelperText-root.Mui-error {
   color: #d32f2f !important; /* red error text */
 }
+
+/* 🎵 MusicPlayer overrides */
+.music-player .music-title {
+  color: #0b0b0b !important; /* Black for title */
+  font-weight: 600 !important;
+  text-align: left !important;
+}
+
+.music-player .music-artist {
+  color: #4b4a4a !important; /* Soft gray for artist */
+  text-align: left !important;
+}
+
+.music-player {
+  min-width: 200px; /* prevents collapsing too much */
+}
+
+.music-player .votes {
+  color: #aaa !important; /* Light gray so it's visible */
+  font-size: 0.85rem;
+  margin-left: 6px;
+  text-align: left !important;
+}

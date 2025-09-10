@@ -91,10 +91,29 @@ router.post("/join-room", async (req, res) => {
   }
 });
 
-router.post("/leave-room", (req, res) => {
-  // When a user leaves, we just clear the room_code from their session
-  req.session.room_code = null;
-  return res.status(200).json({ message: "Room Left" });
+router.post("/leave-room", async (req, res) => {
+  try {
+    const roomCode = req.session.room_code;
+    const userSessionId = req.session.id;
+
+    if (roomCode) {
+      const room = await Room.findOne({ code: roomCode });
+
+      // If the user leaving is the host, delete the room
+      if (room && userSessionId === room.host) {
+        await Room.deleteOne({ code: roomCode });
+        // Also delete any tokens associated with that host
+        await SpotifyToken.deleteMany({ user: userSessionId });
+      }
+    }
+
+    // Clear the room code from the current user's session
+    req.session.room_code = null;
+
+    return res.status(200).json({ message: "Room Left" });
+  } catch (error) {
+    return res.status(500).json({ error: "An error occurred" });
+  }
 });
 
 router.patch("/update-room", async (req, res) => {
@@ -248,8 +267,10 @@ router.get("/current-song", async (req, res) => {
         : 0;
 
     const song = {
-      title: item.name,
-      artist: item.artists.map((artist) => artist.name).join(", "),
+      title: item.name || "Unknown Title",
+      artist:
+        item.artists.map((artist) => artist.name).join(", ") ||
+        "Unknown Artist",
       duration: item.duration_ms,
       time: data.progress_ms,
       image_url: item.album.images[0]?.url,

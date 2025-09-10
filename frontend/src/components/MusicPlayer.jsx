@@ -51,13 +51,13 @@ export default function MusicPlayer({ song, isHost, guestCanPause }) {
   return (
     <Card
       sx={{
-        maxWidth: 800,
+        maxWidth: 600,
         margin: "20px auto",
         borderRadius: 2,
         boxShadow: 3,
         display: "flex",
         alignItems: "center",
-        p: 1,
+        p: 1.25,
       }}
     >
       {/* Left: Album Art */}
@@ -75,11 +75,31 @@ export default function MusicPlayer({ song, isHost, guestCanPause }) {
       />
 
       {/* Right: Song Info + Controls */}
-      <Box sx={{ flex: 1, ml: 2, display: "flex", flexDirection: "column" }}>
-        <Typography component="h5" variant="subtitle1" fontWeight="bold" noWrap>
+      <Box
+        className="music-player"
+        sx={{
+          flex: 1,
+          ml: 5,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <Typography
+          className="music-title"
+          component="h5"
+          variant="subtitle1"
+          fontWeight="semibold"
+          noWrap
+        >
           {song.title}
         </Typography>
-        <Typography color="text.secondary" variant="body2" noWrap>
+        <Typography
+          className="music-artist"
+          component="h5"
+          variant="body2"
+          noWrap
+        >
           {song.artist}
         </Typography>
 
@@ -97,8 +117,8 @@ export default function MusicPlayer({ song, isHost, guestCanPause }) {
             <SkipNextIcon />
           </IconButton>
           {/* --- ADD VOTE COUNTER --- */}
-          <Typography color="text.secondary" variant="body2" sx={{ ml: 1 }}>
-            {song.votes} / {song.votes_required}
+          <Typography className="votes" variant="body2">
+            ({song.votes} / {song.votes_required})
           </Typography>
         </Box>
 
